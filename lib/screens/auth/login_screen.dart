@@ -54,12 +54,30 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
 
-      if (userCredential.user?.email != 'evans@openfood.com' && userCredential.user?.email != 'ugo@mail.com') {
+      // Vérification dynamique du rôle dans Firestore
+      final uid = userCredential.user?.uid;
+      bool isAdmin = (email == 'evans@openfood.com' || email == 'ugo@mail.com');
+
+      if (uid != null) {
+        try {
+          final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+          if (userDoc.exists) {
+            final data = userDoc.data();
+            final role = data?['role']?.toString().toLowerCase();
+            if (role == 'admin' || role == 'superadmin' || role == '99' || data?['isAdmin'] == true) {
+              isAdmin = true;
+            }
+          }
+        } catch (err) {
+          debugPrint('Erreur vérification rôle Firestore: $err');
+        }
+      }
+
+      if (!isAdmin) {
         await FirebaseAuth.instance.signOut();
         setState(() {
-          _errorMessage = "Accès refusé : vous n'êtes pas administrateur";
+          _errorMessage = "Accès refusé : Ce compte n'a pas les droits administrateur (role: 'admin' requis dans Firestore).";
         });
-        // On n'exécute pas le navigateur ci-dessous grâce au return
         return;
       }
 
