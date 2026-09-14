@@ -114,17 +114,35 @@ class _MainDashboardState extends State<MainDashboard> {
               ],
               trailing: Padding(
                 padding: const EdgeInsets.only(top: 24.0, bottom: 24.0),
-                child: IconButton(
-                  icon: const Icon(Icons.logout, color: Colors.redAccent),
-                  tooltip: 'Se déconnecter',
-                  onPressed: () async {
-                    await FirebaseAuth.instance.signOut();
-                    if (mounted) {
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      );
-                    }
-                  },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Tooltip(
+                      message: 'Conçu & Développé par Cooking Data • Solutions Informatiques & IA (cookingdata.fr)',
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.emeraldGreen.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.3)),
+                        ),
+                        child: const Icon(Icons.verified_outlined, color: AppTheme.emeraldGreen, size: 20),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    IconButton(
+                      icon: const Icon(Icons.logout, color: Colors.redAccent),
+                      tooltip: 'Se déconnecter',
+                      onPressed: () async {
+                        await FirebaseAuth.instance.signOut();
+                        if (mounted) {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(builder: (_) => const LoginScreen()),
+                          );
+                        }
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
