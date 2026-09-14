@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Vérification dynamique du rôle dans Firestore
       final uid = userCredential.user?.uid;
-      bool isAdmin = (email == 'evans@openfood.com' || email == 'ugo@mail.com');
+      bool isAdmin = (email == 'openfoodfwi@gmail.com' || email == 'evans@openfood.com' || email == 'ugo@mail.com');
 
       if (uid != null) {
         try {
@@ -111,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
       
       // Fallback in case Firebase is not configured for demo purposes
       if (e.code.contains('api-key') || e.message?.contains('API key') == true) {
-        if (email != 'evans@openfood.com' && email != 'ugo@mail.com') {
+        if (email != 'openfoodfwi@gmail.com' && email != 'evans@openfood.com' && email != 'ugo@mail.com') {
           setState(() {
             _errorMessage = "Accès refusé : vous n'êtes pas administrateur";
           });
