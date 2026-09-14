@@ -54,9 +54,12 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
 
-      // Vérification dynamique du rôle dans Firestore
+      // Vérification dynamique du rôle dans Firestore ou liste admin
       final uid = userCredential.user?.uid;
-      bool isAdmin = (email == 'openfoodfwi@gmail.com' || email == 'evans@openfood.com' || email == 'ugo@mail.com');
+      bool isAdmin = (email == 'openfoodfwi@gmail.com' || 
+                      email == 'evans@mail.com' || 
+                      email == 'evans@openfood.com' || 
+                      email == 'ugo@mail.com');
 
       if (uid != null) {
         try {
@@ -87,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } on FirebaseAuthException catch (e) {
-      String readableMessage = e.message ?? "Erreur d'authentification";
+      String readableMessage = e.message ?? "Erreur d'authentification (${e.code})";
       switch (e.code) {
         case 'user-not-found':
           readableMessage = "Aucun utilisateur trouvé avec cet email.";
@@ -107,34 +110,17 @@ class _LoginScreenState extends State<LoginScreen> {
         case 'invalid-credential':
           readableMessage = "Email ou mot de passe incorrect.";
           break;
+        case 'unauthorized-domain':
+          readableMessage = "Domaine non autorisé dans Firebase Auth.";
+          break;
       }
       
-      // Fallback in case Firebase is not configured for demo purposes
-      if (e.code.contains('api-key') || e.message?.contains('API key') == true) {
-        if (email != 'openfoodfwi@gmail.com' && email != 'evans@openfood.com' && email != 'ugo@mail.com') {
-          setState(() {
-            _errorMessage = "Accès refusé : vous n'êtes pas administrateur";
-          });
-          return;
-        }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Mode Dev : Connexion forcée (Firebase non configuré localement)')),
-          );
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const MainDashboard()),
-          );
-        }
-        return;
-      }
-
       setState(() {
         _errorMessage = readableMessage;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = "Une erreur inattendue est survenue.";
+        _errorMessage = "Erreur : ${e.toString()}";
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
