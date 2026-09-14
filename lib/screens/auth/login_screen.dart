@@ -28,38 +28,14 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim().toLowerCase();
 
     try {
-      UserCredential userCredential;
-      try {
-        userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: email,
-          password: _passwordController.text,
-        );
-      } on FirebaseAuthException catch (authEx) {
-        // Auto-création sécurisée de l'administrateur ugo@mail.com si le compte n'existe pas encore
-        if (authEx.code == 'user-not-found' && email == 'ugo@mail.com') {
-          userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-            email: email,
-            password: _passwordController.text,
-          );
-          // Création du profil Firestore associé
-          await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
-            'id': userCredential.user!.uid,
-            'email': email,
-            'name': 'Ugo Admin',
-            'role': 'admin',
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-        } else {
-          rethrow;
-        }
-      }
+      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: _passwordController.text,
+      );
 
-      // Vérification dynamique du rôle dans Firestore ou liste admin
+      // Vérification 100% dynamique du rôle dans Firestore
       final uid = userCredential.user?.uid;
-      bool isAdmin = (email == 'openfoodfwi@gmail.com' || 
-                      email == 'evans@mail.com' || 
-                      email == 'evans@openfood.com' || 
-                      email == 'ugo@mail.com');
+      bool isAdmin = false;
 
       if (uid != null) {
         try {
@@ -79,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!isAdmin) {
         await FirebaseAuth.instance.signOut();
         setState(() {
-          _errorMessage = "Accès refusé : Ce compte n'a pas les droits administrateur (role: 'admin' requis dans Firestore).";
+          _errorMessage = "Accès refusé : Ce compte ne possède pas les droits administrateur (champ role: 'admin' requis dans Firestore).";
         });
         return;
       }
