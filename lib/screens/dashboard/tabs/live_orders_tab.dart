@@ -79,7 +79,7 @@ class _LiveOrdersTabState extends State<LiveOrdersTab> {
                   underline: Container(height: 1, color: Colors.white24),
                   items: const [
                     DropdownMenuItem(value: null, child: Text('Tous les états')),
-                    DropdownMenuItem(value: 0, child: Text('En Attente')),
+                    DropdownMenuItem(value: 0, child: Text('En Attente / Temps Écoulé')),
                     DropdownMenuItem(value: 1, child: Text('En Préparation')),
                     DropdownMenuItem(value: 2, child: Text('En Route')),
                     DropdownMenuItem(value: 3, child: Text('Livré')),
@@ -314,7 +314,7 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
       if (mounted) setState(() {});
     });
     _fetchDriver();
@@ -424,9 +424,9 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
     }
   }
 
-  String _getStatusText(int status) {
+  String _getStatusText(int status, int elapsedMinutes) {
     switch (status) {
-      case 0: return 'En Attente';
+      case 0: return elapsedMinutes >= 5 ? 'Temps Écoulé' : 'En Attente';
       case 1: return 'En Préparation';
       case 2: return 'En Route';
       case 3: return 'Livré';
@@ -435,9 +435,9 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
     }
   }
 
-  Color _getStatusColor(int status) {
+  Color _getStatusColor(int status, int elapsedMinutes) {
     switch (status) {
-      case 0: return Colors.redAccent;
+      case 0: return elapsedMinutes >= 5 ? const Color(0xFFE53935) : const Color(0xFFF5820A);
       case 1: return Colors.orangeAccent;
       case 2: return Colors.blueAccent;
       case 3: return AppTheme.emeraldGreen;
@@ -451,6 +451,7 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
     final order = widget.order;
     final now = DateTime.now();
     final elapsedMinutes = now.difference(order.createdAt).inMinutes;
+    final isExpired = order.status == 0 && elapsedMinutes >= 5;
 
     return GlassContainer(
       padding: const EdgeInsets.all(16),
@@ -472,18 +473,18 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(order.status),
+                    color: _getStatusColor(order.status, elapsedMinutes),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: _getStatusColor(order.status).withValues(alpha: 0.4),
+                        color: _getStatusColor(order.status, elapsedMinutes).withValues(alpha: 0.4),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       )
                     ],
                   ),
                   child: Text(
-                    _getStatusText(order.status).toUpperCase(),
+                    _getStatusText(order.status, elapsedMinutes).toUpperCase(),
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5),
                   ),
                 ),
@@ -493,11 +494,11 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
           // Timer
           Row(
             children: [
-              const Icon(Icons.timer, color: Colors.amber, size: 16),
+              Icon(isExpired ? Icons.warning_amber_rounded : Icons.timer, color: isExpired ? Colors.redAccent : Colors.amber, size: 16),
               const SizedBox(width: 4),
               Text(
-                'Écoulé: $elapsedMinutes min',
-                style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12),
+                'Écoulé: $elapsedMinutes min${isExpired ? ' (Délai dépassé)' : ''}',
+                style: TextStyle(color: isExpired ? Colors.redAccent : Colors.amber, fontWeight: FontWeight.bold, fontSize: 12),
               ),
               if (order.prepTimeMinutes != null) ...[
                 const SizedBox(width: 8),
