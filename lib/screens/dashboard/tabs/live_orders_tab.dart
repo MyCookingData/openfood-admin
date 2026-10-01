@@ -361,32 +361,68 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
 
   Future<void> _handleCapturePayment(String orderId) async {
     setState(() => _isProcessingAction = true);
-    bool functionSuccess = false;
     try {
       final callable = FirebaseFunctions.instance.httpsCallable('captureOrderPayment');
-      final res = await callable.call({'orderId': orderId});
-      if (res.data != null && res.data['success'] == true) {
-        functionSuccess = true;
-      }
-    } catch (e) {
-      debugPrint("Cloud function captureOrderPayment error, applying direct fallback: $e");
-    }
-
-    try {
-      // Si la Cloud Function a échoué (ex: mock paymentIntent, Spark plan, etc.), on met à jour directement Firestore
-      if (!functionSuccess) {
-        await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
-          'paymentStatus': 'captured',
-          'status': 1,
-        });
-      }
+      await callable.call({'orderId': orderId});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Commande acceptée et passée en préparation !'), backgroundColor: AppTheme.emeraldGreen),
+          const SnackBar(
+            content: Text('Paiement Stripe capturé avec succès. Commande acceptée !'),
+            backgroundColor: AppTheme.emeraldGreen,
+          ),
         );
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.redAccent));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Échec du débit bancaire Stripe : $e',
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          duration: const Duration(seconds: 15),
+          backgroundColor: Colors.redAccent,
+          action: SnackBarAction(
+            label: 'Valider quand même',
+            textColor: Colors.yellowAccent,
+            onPressed: () => _forceValidateOrder(orderId),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessingAction = false);
+    }
+  }
+
+  Future<void> _forceValidateOrder(String orderId) async {
+    setState(() => _isProcessingAction = true);
+    try {
+      await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
+        'paymentStatus': 'captured_manual_override',
+        'status': 1,
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Commande validée manuellement (Mode Débogage).'),
+            backgroundColor: Colors.orangeAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors du forçage: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isProcessingAction = false);
     }
@@ -394,31 +430,68 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
 
   Future<void> _handleCancelPayment(String orderId) async {
     setState(() => _isProcessingAction = true);
-    bool functionSuccess = false;
     try {
       final callable = FirebaseFunctions.instance.httpsCallable('cancelOrderPayment');
-      final res = await callable.call({'orderId': orderId});
-      if (res.data != null && res.data['success'] == true) {
-        functionSuccess = true;
-      }
-    } catch (e) {
-      debugPrint("Cloud function cancelOrderPayment error, applying direct fallback: $e");
-    }
-
-    try {
-      if (!functionSuccess) {
-        await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
-          'paymentStatus': 'cancelled',
-          'status': 4,
-        });
-      }
+      await callable.call({'orderId': orderId});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Commande refusée / annulée.'), backgroundColor: Colors.orangeAccent),
+          const SnackBar(
+            content: Text('Empreinte annulée. Commande refusée.'),
+            backgroundColor: Colors.orangeAccent,
+          ),
         );
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.redAccent));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Échec de l\'annulation Stripe : $e',
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          duration: const Duration(seconds: 15),
+          backgroundColor: Colors.redAccent,
+          action: SnackBarAction(
+            label: 'Refuser quand même',
+            textColor: Colors.yellowAccent,
+            onPressed: () => _forceCancelOrder(orderId),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessingAction = false);
+    }
+  }
+
+  Future<void> _forceCancelOrder(String orderId) async {
+    setState(() => _isProcessingAction = true);
+    try {
+      await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
+        'paymentStatus': 'cancelled_manual_override',
+        'status': 4,
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Commande refusée manuellement (Mode Débogage).'),
+            backgroundColor: Colors.orangeAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors du forçage: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isProcessingAction = false);
     }
