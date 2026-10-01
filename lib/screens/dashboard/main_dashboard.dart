@@ -62,11 +62,12 @@ class _MainDashboardState extends State<MainDashboard> {
               leading: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20.0),
                 child: Container(
-                  width: 48,
-                  height: 48,
+                  width: 54,
+                  height: 54,
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.35),
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.4), width: 1.5),
                     boxShadow: [
                       BoxShadow(
@@ -76,15 +77,13 @@ class _MainDashboardState extends State<MainDashboard> {
                       ),
                     ],
                   ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/logo_openfood_transparent.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Image.asset(
-                        'assets/logo-badge-rounded.png',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.restaurant_menu, color: AppTheme.emeraldGreen, size: 28),
-                      ),
+                  child: Image.asset(
+                    'assets/logo_openfood_transparent.png',
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Image.asset(
+                      'assets/icon.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.restaurant_menu, color: AppTheme.emeraldGreen, size: 28),
                     ),
                   ),
                 ),

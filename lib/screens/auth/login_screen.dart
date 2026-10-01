@@ -123,29 +123,27 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 72,
-                    height: 72,
+                    height: 64,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.4), width: 2),
+                      color: Colors.black.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.35), width: 1.5),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.emeraldGreen.withValues(alpha: 0.25),
+                          color: AppTheme.emeraldGreen.withValues(alpha: 0.2),
                           blurRadius: 16,
                           offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/logo_openfood_transparent.png',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Image.asset(
-                          'assets/logo-badge-rounded.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.admin_panel_settings, color: AppTheme.emeraldGreen, size: 40),
-                        ),
+                    child: Image.asset(
+                      'assets/logo_openfood_transparent.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        'assets/logo_long.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.admin_panel_settings, color: AppTheme.emeraldGreen, size: 40),
                       ),
                     ),
                   ),
