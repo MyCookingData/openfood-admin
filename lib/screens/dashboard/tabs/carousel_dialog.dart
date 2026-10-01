@@ -84,6 +84,8 @@ class _CarouselDialogState extends State<CarouselDialog> with SingleTickerProvid
     {'emoji': '👋', 'label': 'Bienvenue'},
   ];
 
+  bool _isLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -140,7 +142,26 @@ class _CarouselDialogState extends State<CarouselDialog> with SingleTickerProvid
       _minTotalSpentCtrl.text = c.minTotalSpent?.toString() ?? '';
       _maxTotalSpentCtrl.text = c.maxTotalSpent?.toString() ?? '';
       _selectedTargetRestaurantId = c.targetRestaurantId;
+      _tempActionRestoId = c.targetRestaurantId;
       _placement = c.placement;
+
+      // Restauration automatique du restaurant pour les bannières "Ouvrir un produit"
+      if (_actionType == CarouselActionType.open_product && _actionPayloadCtrl.text.isNotEmpty) {
+        FirebaseFirestore.instance.collection('products').doc(_actionPayloadCtrl.text).get().then((doc) {
+          if (doc.exists && mounted) {
+            final data = doc.data();
+            if (data != null) {
+              final rId = data['restaurantId'] as String?;
+              if (rId != null && (_tempActionRestoId == null || _tempActionRestoId!.isEmpty)) {
+                setState(() {
+                  _tempActionRestoId = rId;
+                  _selectedTargetRestaurantId = rId;
+                });
+              }
+            }
+          }
+        });
+      }
     }
   }
   
@@ -167,6 +188,14 @@ class _CarouselDialogState extends State<CarouselDialog> with SingleTickerProvid
       final collection = FirebaseFirestore.instance.collection('carousels');
       final String docId = widget.carousel?.id ?? collection.doc().id;
 
+      // Calcul du restaurantId effectif lié à l'action
+      String? effectiveTargetRestaurantId = _selectedTargetRestaurantId;
+      if (_actionType == CarouselActionType.open_restaurant && _actionPayloadCtrl.text.trim().isNotEmpty) {
+        effectiveTargetRestaurantId = _actionPayloadCtrl.text.trim();
+      } else if (_actionType == CarouselActionType.open_product && _tempActionRestoId != null && _tempActionRestoId!.isNotEmpty) {
+        effectiveTargetRestaurantId = _tempActionRestoId;
+      }
+
       final newCarousel = CarouselModel(
         id: docId,
         emoji: _emojiCtrl.text.trim(),
@@ -191,7 +220,7 @@ class _CarouselDialogState extends State<CarouselDialog> with SingleTickerProvid
         maxOrders: maxOrders,
         minTotalSpent: minTotalSpent,
         maxTotalSpent: maxTotalSpent,
-        targetRestaurantId: _selectedTargetRestaurantId,
+        targetRestaurantId: effectiveTargetRestaurantId,
       );
 
       if (widget.carousel == null) {
@@ -543,11 +572,12 @@ class _CarouselDialogState extends State<CarouselDialog> with SingleTickerProvid
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) return const CircularProgressIndicator();
                   final items = snapshot.data!.docs;
+                  final currentVal = items.any((e) => e.id == _tempActionRestoId) ? _tempActionRestoId : null;
                   return DropdownButtonFormField<String?>(
-                    value: _tempActionRestoId,
+                    value: currentVal,
                     dropdownColor: AppTheme.lighterDarkBackground,
                     style: const TextStyle(color: Colors.white),
-                    decoration: _inputDeco('Filtre: Choisir un restaurant d\'abord'),
+                    decoration: _inputDeco('Restaurant associé au produit'),
                     items: [
                       const DropdownMenuItem(value: null, child: Text('Tous les restaurants')),
                       ...items.map((e) => DropdownMenuItem(value: e.id, child: Text(e['name'] as String)))
@@ -555,13 +585,13 @@ class _CarouselDialogState extends State<CarouselDialog> with SingleTickerProvid
                     onChanged: (v) {
                       setState(() {
                         _tempActionRestoId = v;
+                        _selectedTargetRestaurantId = v;
                         if (v != null) {
                           final doc = items.firstWhere((e) => e.id == v);
                           _tempActionRestoName = doc['name'] as String;
                         } else {
                           _tempActionRestoName = null;
                         }
-                        _actionPayloadCtrl.clear();
                       });
                     },
                   );
@@ -583,10 +613,25 @@ class _CarouselDialogState extends State<CarouselDialog> with SingleTickerProvid
                     decoration: _inputDeco('Sélectionner le produit'),
                     items: [
                       const DropdownMenuItem(value: null, child: Text('Sélectionner un produit')),
-                      ...products.map((e) => DropdownMenuItem(value: e.id, child: Text(e['name'] as String)))
+                      ...products.map((e) {
+                        final data = e.data() as Map<String, dynamic>;
+                        final pName = (data['name'] as String?) ?? 'Produit sans nom';
+                        return DropdownMenuItem(value: e.id, child: Text(pName));
+                      })
                     ],
                     onChanged: (v) {
-                      if (v != null) setState(() => _actionPayloadCtrl.text = v);
+                      if (v != null) {
+                        setState(() {
+                          _actionPayloadCtrl.text = v;
+                          final prodDoc = products.firstWhere((e) => e.id == v);
+                          final prodData = prodDoc.data() as Map<String, dynamic>;
+                          final rId = prodData['restaurantId'] as String?;
+                          if (rId != null && rId.isNotEmpty) {
+                            _tempActionRestoId = rId;
+                            _selectedTargetRestaurantId = rId;
+                          }
+                        });
+                      }
                     },
                   );
                 }

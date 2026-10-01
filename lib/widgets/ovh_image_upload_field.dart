@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/ovh_storage_service.dart';
+import 'photo_library_picker_dialog.dart';
 
 class OvhImageUploadField extends StatefulWidget {
   final String label;
@@ -33,7 +34,7 @@ class _OvhImageUploadFieldState extends State<OvhImageUploadField> {
         widget.onUploaded?.call();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("✅ Photo enregistrée sur le serveur OVH avec succès !"),
+            content: Text("✅ Nouvelle photo enregistrée sur le serveur OVH !"),
             backgroundColor: Color(0xFF10B981),
             behavior: SnackBarBehavior.floating,
           ),
@@ -51,6 +52,27 @@ class _OvhImageUploadFieldState extends State<OvhImageUploadField> {
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  Future<void> _openLibraryPicker() async {
+    final selectedUrl = await PhotoLibraryPickerDialog.show(
+      context,
+      initialFolder: widget.folder,
+    );
+
+    if (selectedUrl != null && selectedUrl.isNotEmpty && mounted) {
+      setState(() {
+        widget.controller.text = selectedUrl;
+      });
+      widget.onUploaded?.call();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("✅ Photo sélectionnée depuis la Bibliothèque Photo OVH !"),
+          backgroundColor: Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -134,16 +156,39 @@ class _OvhImageUploadFieldState extends State<OvhImageUploadField> {
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
+
+            // Bouton 1 : Choisir depuis la Bibliothèque Photo
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E2E21),
+                backgroundColor: const Color(0xFF142418),
                 foregroundColor: const Color(0xFF34D399),
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(color: const Color(0xFF34D399).withValues(alpha: 0.4)),
+                ),
+              ),
+              onPressed: _openLibraryPicker,
+              icon: const Icon(Icons.photo_library_rounded, size: 18),
+              label: const Text(
+                "Bibliothèque",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Bouton 2 : Importer un nouveau fichier vers OVH
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1E2E21),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
                 ),
               ),
               onPressed: _isUploading ? null : _pickAndUpload,
@@ -151,11 +196,11 @@ class _OvhImageUploadFieldState extends State<OvhImageUploadField> {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF34D399)),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.cloud_upload_rounded, size: 18),
               label: Text(
-                _isUploading ? "Envoi..." : "Photo OVH",
+                _isUploading ? "Envoi..." : "Importer",
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
               ),
             ),

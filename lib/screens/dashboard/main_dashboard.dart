@@ -11,6 +11,7 @@ import 'tabs/inventory_tab.dart';
 import 'tabs/promo_codes_tab.dart';
 import 'tabs/carousel_tab.dart';
 import 'tabs/categories_tab.dart';
+import 'tabs/photo_library_tab.dart';
 
 class MainDashboard extends StatefulWidget {
   const MainDashboard({super.key});
@@ -32,6 +33,7 @@ class _MainDashboardState extends State<MainDashboard> {
     PromoCodesTab(),
     CarouselTab(),
     CategoriesTab(),
+    PhotoLibraryTab(),
   ];
 
   @override
@@ -57,59 +59,86 @@ class _MainDashboardState extends State<MainDashboard> {
                 });
               },
               labelType: NavigationRailLabelType.all,
-              leading: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24.0),
-                child: Icon(
-                  Icons.restaurant_menu,
-                  color: AppTheme.emeraldGreen,
-                  size: 40,
+              leading: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20.0),
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.4), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.emeraldGreen.withValues(alpha: 0.25),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/logo_openfood_transparent.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        'assets/logo-badge-rounded.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.restaurant_menu, color: AppTheme.emeraldGreen, size: 28),
+                      ),
+                    ),
+                  ),
                 ),
               ),
               destinations: const [
                 NavigationRailDestination(
                   icon: Icon(Icons.receipt_long),
-                  selectedIcon: Icon(Icons.receipt_long),
+                  selectedIcon: Icon(Icons.receipt_long, color: AppTheme.emeraldGreen),
                   label: Text('Commandes Live'),
                 ),
                 NavigationRailDestination(
                   icon: Icon(Icons.bar_chart),
-                  selectedIcon: Icon(Icons.bar_chart),
+                  selectedIcon: Icon(Icons.bar_chart, color: AppTheme.emeraldGreen),
                   label: Text('Statistiques'),
                 ),
                 NavigationRailDestination(
                   icon: Icon(Icons.storefront),
-                  selectedIcon: Icon(Icons.storefront),
+                  selectedIcon: Icon(Icons.storefront, color: AppTheme.emeraldGreen),
                   label: Text('Restaurants'),
                 ),
                 NavigationRailDestination(
                   icon: Icon(Icons.inventory_2),
-                  selectedIcon: Icon(Icons.inventory_2),
+                  selectedIcon: Icon(Icons.inventory_2, color: AppTheme.emeraldGreen),
                   label: Text('Inventaire'),
                 ),
                 NavigationRailDestination(
                   icon: Icon(Icons.map_outlined),
-                  selectedIcon: Icon(Icons.map_outlined),
+                  selectedIcon: Icon(Icons.map_outlined, color: AppTheme.emeraldGreen),
                   label: Text('Logistique'),
                 ),
                 NavigationRailDestination(
                   icon: Icon(Icons.people),
-                  selectedIcon: Icon(Icons.people),
+                  selectedIcon: Icon(Icons.people, color: AppTheme.emeraldGreen),
                   label: Text('Utilisateurs'),
                 ),
                 NavigationRailDestination(
                   icon: Icon(Icons.local_offer),
-                  selectedIcon: Icon(Icons.local_offer),
+                  selectedIcon: Icon(Icons.local_offer, color: AppTheme.emeraldGreen),
                   label: Text('Codes Promo'),
                 ),
                 NavigationRailDestination(
                   icon: Icon(Icons.view_carousel),
-                  selectedIcon: Icon(Icons.view_carousel),
+                  selectedIcon: Icon(Icons.view_carousel, color: AppTheme.emeraldGreen),
                   label: Text('Bannières Accueil'),
                 ),
                 NavigationRailDestination(
                   icon: Icon(Icons.category),
-                  selectedIcon: Icon(Icons.category),
+                  selectedIcon: Icon(Icons.category, color: AppTheme.emeraldGreen),
                   label: Text('Catégories'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.photo_library),
+                  selectedIcon: Icon(Icons.photo_library, color: AppTheme.emeraldGreen),
+                  label: Text('Bibliothèque Photo'),
                 ),
               ],
               trailing: Padding(
