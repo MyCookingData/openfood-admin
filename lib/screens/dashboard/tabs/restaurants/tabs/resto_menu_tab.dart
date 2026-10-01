@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:openfood_models/openfood_models.dart';
 import '../../../../../theme/app_theme.dart';
 import '../../../../../widgets/glass_container.dart';
+import '../../../../../widgets/ovh_image_upload_field.dart';
 
 class RestoMenuTab extends StatelessWidget {
   final RestaurantModel restaurant;
@@ -334,7 +335,12 @@ class _ProductDialogState extends State<_ProductDialog> {
                             const SizedBox(height: 16),
                             _buildField('Nom du plat', _nameCtrl),
                             _buildField('Description', _descCtrl, maxLines: 3),
-                            _buildField('URL Image', _imgCtrl),
+                            OvhImageUploadField(
+                              label: 'Photo du Plat (Hébergement OVH)',
+                              controller: _imgCtrl,
+                              folder: 'dishes',
+                            ),
+                            const SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(

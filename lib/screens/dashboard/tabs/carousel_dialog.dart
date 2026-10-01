@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../theme/app_theme.dart';
 import 'package:openfood_models/openfood_models.dart';
 import '../../../widgets/glass_container.dart';
+import '../../../widgets/ovh_image_upload_field.dart';
 
 class CarouselDialog extends StatefulWidget {
   final CarouselModel? carousel;
@@ -52,7 +53,36 @@ class _CarouselDialogState extends State<CarouselDialog> with SingleTickerProvid
   TimeOfDay? _validTimeEnd;
   List<int> _validDaysOfWeek = [];
 
-  bool _isLoading = false;
+  final List<Map<String, String>> _availableEmojis = const [
+    {'emoji': '🔥', 'label': 'Offre brûlante'},
+    {'emoji': '⭐', 'label': 'Vedette / Bestseller'},
+    {'emoji': '⚡', 'label': 'Vente Flash'},
+    {'emoji': '🎉', 'label': 'Nouveauté / Événement'},
+    {'emoji': '🎁', 'label': 'Cadeau / Offert'},
+    {'emoji': '🏷️', 'label': 'Réduction / Promo'},
+    {'emoji': '🍔', 'label': 'Burger'},
+    {'emoji': '🍗', 'label': 'Poulet & Tenders'},
+    {'emoji': '🍕', 'label': 'Pizza'},
+    {'emoji': '🥩', 'label': 'Grillade & Viande'},
+    {'emoji': '🐟', 'label': 'Poisson & Mer'},
+    {'emoji': '🍤', 'label': 'Crevettes & Fruits de mer'},
+    {'emoji': '🍟', 'label': 'Frites & Snacks'},
+    {'emoji': '🌯', 'label': 'Wrap & Tacos'},
+    {'emoji': '🥗', 'label': 'Salade & Bowl'},
+    {'emoji': '🍝', 'label': 'Pâtes & Pasta'},
+    {'emoji': '🍛', 'label': 'Plat Créole / Colombo'},
+    {'emoji': '🍹', 'label': 'Cocktail & Jus Caraïbes'},
+    {'emoji': '🥤', 'label': 'Boisson & Soda'},
+    {'emoji': '🧋', 'label': 'Bubble Tea'},
+    {'emoji': '🥥', 'label': 'Coco & Tropical'},
+    {'emoji': '🍍', 'label': 'Ananas & Fruits'},
+    {'emoji': '🍰', 'label': 'Gâteau & Pâtisserie'},
+    {'emoji': '🍨', 'label': 'Glace & Dessert'},
+    {'emoji': '🛵', 'label': 'Livraison Rapide'},
+    {'emoji': '🌴', 'label': 'Martinique & Soleil'},
+    {'emoji': '👑', 'label': 'Menu VIP & Signature'},
+    {'emoji': '👋', 'label': 'Bienvenue'},
+  ];
 
   @override
   void initState() {
@@ -341,18 +371,58 @@ class _CarouselDialogState extends State<CarouselDialog> with SingleTickerProvid
       padding: const EdgeInsets.all(16),
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: 80,
-              child: TextFormField(
-                controller: _emojiCtrl,
-                style: const TextStyle(color: Colors.white, fontSize: 24),
-                decoration: _inputDeco('Emoji'),
-                textAlign: TextAlign.center,
+            Expanded(
+              flex: 2,
+              child: DropdownButtonFormField<String>(
+                value: _availableEmojis.any((e) => e['emoji'] == _emojiCtrl.text)
+                    ? _emojiCtrl.text
+                    : (_emojiCtrl.text.isEmpty ? '🔥' : null),
+                dropdownColor: const Color(0xFF141E16),
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: _inputDeco('Emoji').copyWith(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                ),
+                icon: const Icon(Icons.arrow_drop_down, color: AppTheme.emeraldGreen),
+                items: [
+                  if (_emojiCtrl.text.isNotEmpty && !_availableEmojis.any((e) => e['emoji'] == _emojiCtrl.text))
+                    DropdownMenuItem<String>(
+                      value: _emojiCtrl.text,
+                      child: Text('${_emojiCtrl.text} (Actuel)', style: const TextStyle(color: Colors.white)),
+                    ),
+                  ..._availableEmojis.map((item) {
+                    return DropdownMenuItem<String>(
+                      value: item['emoji'],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(item['emoji']!, style: const TextStyle(fontSize: 18)),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              item['label']!,
+                              style: const TextStyle(color: Colors.white, fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() {
+                      _emojiCtrl.text = val;
+                    });
+                  }
+                },
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
+              flex: 3,
               child: TextFormField(
                 controller: _titleCtrl,
                 style: const TextStyle(color: Colors.white),
@@ -381,9 +451,19 @@ class _CarouselDialogState extends State<CarouselDialog> with SingleTickerProvid
         const Divider(color: Colors.white24, height: 32),
         const Text('Visuels Avancés', style: TextStyle(color: AppTheme.emeraldGreen, fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
-        TextFormField(controller: _imageUrlCtrl, style: const TextStyle(color: Colors.white), decoration: _inputDeco('URL Image de Fond (Optionnel)')),
+        OvhImageUploadField(
+          label: 'Image de Fond de la Bannière (Serveur OVH)',
+          controller: _imageUrlCtrl,
+          folder: 'carousels',
+          onUploaded: () => setState(() {}),
+        ),
         const SizedBox(height: 16),
-        TextFormField(controller: _logoUrlCtrl, style: const TextStyle(color: Colors.white), decoration: _inputDeco('URL Logo Restaurant/Marque (Optionnel)')),
+        OvhImageUploadField(
+          label: 'Logo Restaurant / Marque (Serveur OVH)',
+          controller: _logoUrlCtrl,
+          folder: 'carousels',
+          onUploaded: () => setState(() {}),
+        ),
         const SizedBox(height: 16),
         Row(
           children: [

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:openfood_models/openfood_models.dart';
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/glass_container.dart';
+import '../../../../widgets/ovh_image_upload_field.dart';
 import 'restaurant_details_page.dart';
 
 class RestaurantsListTab extends StatelessWidget {
@@ -251,7 +252,13 @@ class _AddRestaurantDialogState extends State<_AddRestaurantDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildField('Nom du restaurant', _nameCtrl),
-              _buildField('URL Image', _imgCtrl),
+              const SizedBox(height: 8),
+              OvhImageUploadField(
+                label: 'Photo de Couverture (Serveur OVH)',
+                controller: _imgCtrl,
+                folder: 'restaurants',
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(child: _buildField('Type (ex: Fusion)', _typeCtrl)),

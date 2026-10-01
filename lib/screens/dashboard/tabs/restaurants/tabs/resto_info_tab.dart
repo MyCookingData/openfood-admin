@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:openfood_models/openfood_models.dart';
 import '../../../../../theme/app_theme.dart';
 import '../../../../../widgets/glass_container.dart';
+import '../../../../../widgets/ovh_image_upload_field.dart';
 
 class RestoInfoTab extends StatefulWidget {
   final RestaurantModel restaurant;
@@ -97,13 +98,14 @@ class _RestoInfoTabState extends State<RestoInfoTab> {
           children: [
             const Text('Informations Générales', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(child: _buildField('Nom', _nameCtrl)),
-                const SizedBox(width: 16),
-                Expanded(child: _buildField('URL Image', _imgCtrl)),
-              ],
+            _buildField('Nom', _nameCtrl),
+            const SizedBox(height: 16),
+            OvhImageUploadField(
+              label: 'Photo de Couverture du Restaurant (Serveur OVH)',
+              controller: _imgCtrl,
+              folder: 'restaurants',
             ),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(child: _buildField('Type (ex: Fusion)', _typeCtrl)),
