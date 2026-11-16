@@ -1,10 +1,21 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
+import 'package:image_picker_for_web/image_picker_for_web.dart';
 import 'theme/app_theme.dart';
 import 'screens/auth/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  if (kIsWeb) {
+    try {
+      ImagePickerPlatform.instance = ImagePickerPlugin();
+    } catch (e) {
+      debugPrint('Registration of ImagePickerPlugin failed: $e');
+    }
+  }
   
   try {
     // Initialisation de Firebase avec le projet officiel client open-food-app-819c2
