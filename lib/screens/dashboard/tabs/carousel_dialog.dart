@@ -789,23 +789,34 @@ class _CarouselDialogState extends State<CarouselDialog> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isMobile = screenSize.width < 850;
+
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(24),
+      insetPadding: EdgeInsets.all(isMobile ? 12 : 24),
       child: GlassContainer(
         padding: const EdgeInsets.all(0),
-        child: SizedBox(
-          width: 1000,
-          height: 700,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: 1000,
+            maxHeight: screenSize.height * 0.92,
+          ),
           child: Column(
             children: [
               // HEADER
               Padding(
-                padding: const EdgeInsets.all(24.0),
+                padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(widget.carousel == null ? 'Créer une Bannière' : 'Modifier la Bannière', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                    Expanded(
+                      child: Text(
+                        widget.carousel == null ? 'Créer une Bannière' : 'Modifier la Bannière',
+                        style: TextStyle(color: Colors.white, fontSize: isMobile ? 18 : 24, fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     IconButton(icon: const Icon(Icons.close, color: Colors.white54), onPressed: () => Navigator.pop(context)),
                   ],
                 ),
@@ -816,49 +827,91 @@ class _CarouselDialogState extends State<CarouselDialog> with SingleTickerProvid
               Expanded(
                 child: Form(
                   key: _formKey,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // LEFT: LIVE PREVIEW
-                      Container(
-                        width: 360,
-                        padding: const EdgeInsets.all(24),
-                        decoration: const BoxDecoration(
-                          border: Border(right: BorderSide(color: Colors.white24)),
-                        ),
-                        child: Center(child: _buildLivePreview()),
-                      ),
-                      
-                      // RIGHT: CONFIG TABS
-                      Expanded(
-                        child: Column(
+                  child: isMobile
+                      ? Column(
                           children: [
-                            TabBar(
-                              controller: _tabController,
-                              indicatorColor: AppTheme.emeraldGreen,
-                              labelColor: AppTheme.emeraldGreen,
-                              unselectedLabelColor: Colors.white54,
-                              tabs: const [
-                                Tab(icon: Icon(Icons.palette), text: 'Design'),
-                                Tab(icon: Icon(Icons.touch_app), text: 'Action'),
-                                Tab(icon: Icon(Icons.track_changes), text: 'Ciblage'),
-                              ],
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              child: Center(
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: _buildLivePreview(),
+                                ),
+                              ),
                             ),
+                            const Divider(color: Colors.white24, height: 1),
                             Expanded(
-                              child: TabBarView(
-                                controller: _tabController,
+                              child: Column(
                                 children: [
-                                  _buildDesignTab(),
-                                  _buildActionTab(),
-                                  _buildTargetingTab(),
+                                  TabBar(
+                                    controller: _tabController,
+                                    indicatorColor: AppTheme.emeraldGreen,
+                                    labelColor: AppTheme.emeraldGreen,
+                                    unselectedLabelColor: Colors.white54,
+                                    tabs: const [
+                                      Tab(icon: Icon(Icons.palette), text: 'Design'),
+                                      Tab(icon: Icon(Icons.touch_app), text: 'Action'),
+                                      Tab(icon: Icon(Icons.track_changes), text: 'Ciblage'),
+                                    ],
+                                  ),
+                                  Expanded(
+                                    child: TabBarView(
+                                      controller: _tabController,
+                                      children: [
+                                        _buildDesignTab(),
+                                        _buildActionTab(),
+                                        _buildTargetingTab(),
+                                      ],
+                                    ),
+                                  )
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // LEFT: LIVE PREVIEW
+                            Container(
+                              width: 360,
+                              padding: const EdgeInsets.all(24),
+                              decoration: const BoxDecoration(
+                                border: Border(right: BorderSide(color: Colors.white24)),
+                              ),
+                              child: Center(child: _buildLivePreview()),
+                            ),
+                            
+                            // RIGHT: CONFIG TABS
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  TabBar(
+                                    controller: _tabController,
+                                    indicatorColor: AppTheme.emeraldGreen,
+                                    labelColor: AppTheme.emeraldGreen,
+                                    unselectedLabelColor: Colors.white54,
+                                    tabs: const [
+                                      Tab(icon: Icon(Icons.palette), text: 'Design'),
+                                      Tab(icon: Icon(Icons.touch_app), text: 'Action'),
+                                      Tab(icon: Icon(Icons.track_changes), text: 'Ciblage'),
+                                    ],
+                                  ),
+                                  Expanded(
+                                    child: TabBarView(
+                                      controller: _tabController,
+                                      children: [
+                                        _buildDesignTab(),
+                                        _buildActionTab(),
+                                        _buildTargetingTab(),
+                                      ],
+                                    ),
+                                  )
                                 ],
                               ),
                             )
                           ],
                         ),
-                      )
-                    ],
-                  ),
                 ),
               ),
               

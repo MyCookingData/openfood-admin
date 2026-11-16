@@ -252,12 +252,17 @@ class _PromoCodeDialogState extends State<PromoCodeDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isMobile = screenSize.width < 600;
+
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
-        width: 600,
-        height: 800,
-        padding: const EdgeInsets.all(24),
+        constraints: BoxConstraints(
+          maxWidth: 600,
+          maxHeight: screenSize.height * 0.9,
+        ),
+        padding: EdgeInsets.all(isMobile ? 16 : 24),
         decoration: BoxDecoration(
           color: AppTheme.darkBackground,
           borderRadius: BorderRadius.circular(16),

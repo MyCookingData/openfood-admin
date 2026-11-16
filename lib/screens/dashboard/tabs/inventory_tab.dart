@@ -23,45 +23,59 @@ class _InventoryTabState extends State<InventoryTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 700;
+
+        return Padding(
+          padding: EdgeInsets.all(isMobile ? 12.0 : 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Inventaire Global',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              if (_selectedRestaurantId != null)
-                ElevatedButton.icon(
-                  onPressed: () => _showAddInventoryItemDialog(context, _selectedRestaurantId!),
-                  icon: const Icon(Icons.add),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.emeraldGreen,
-                    foregroundColor: Colors.white,
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'Inventaire Global',
+                    style: TextStyle(
+                      fontSize: isMobile ? 22 : 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                  label: const Text('Nouvel Article'),
-                ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: () => _runMigration(context),
-                icon: const Icon(Icons.sync),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                ),
-                label: const Text('Migrer Options'),
-              )
-            ],
-          ),
-          const SizedBox(height: 24),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (_selectedRestaurantId != null)
+                        ElevatedButton.icon(
+                          onPressed: () => _showAddInventoryItemDialog(context, _selectedRestaurantId!),
+                          icon: const Icon(Icons.add, size: 18),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.emeraldGreen,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: 12),
+                          ),
+                          label: Text(isMobile ? 'Ajouter' : 'Nouvel Article'),
+                        ),
+                      ElevatedButton.icon(
+                        onPressed: () => _runMigration(context),
+                        icon: const Icon(Icons.sync, size: 18),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: 12),
+                        ),
+                        label: Text(isMobile ? 'Migrer' : 'Migrer Options'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
           // Restaurant selector
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance.collection('restaurants').snapshots(),
@@ -245,6 +259,8 @@ class _InventoryTabState extends State<InventoryTab> {
           ),
         ],
       ),
+    );
+      },
     );
   }
 

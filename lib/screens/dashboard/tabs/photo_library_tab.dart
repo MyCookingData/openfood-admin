@@ -783,271 +783,310 @@ class _PhotoLibraryTabState extends State<PhotoLibraryTab> {
     final usedCount = _allFiles.where((f) => f.isUsed).length;
     final unusedCount = _allFiles.length - usedCount;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Titre & Boutons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final isMobile = screenWidth < 768;
+        final isNarrow = screenWidth < 950;
+
+        Widget kpi1 = _buildKpiCard(
+          title: 'Total Photos OVH',
+          value: '${_allFiles.length}',
+          subtitle: 'Fichiers hébergés',
+          icon: Icons.photo_library,
+          color: Colors.blueAccent,
+        );
+        Widget kpi2 = _buildKpiCard(
+          title: 'Espace Disque',
+          value: _totalSizeFormatted,
+          subtitle: '$_totalSizeBytes octets',
+          icon: Icons.storage,
+          color: Colors.purpleAccent,
+        );
+        Widget kpi3 = _buildKpiCard(
+          title: 'Photos Utilisées',
+          value: '$usedCount',
+          subtitle: _allFiles.isEmpty ? '0%' : '${((usedCount / _allFiles.length) * 100).toStringAsFixed(0)}% du catalogue',
+          icon: Icons.check_circle_outline,
+          color: AppTheme.emeraldGreen,
+        );
+        Widget kpi4 = _buildKpiCard(
+          title: 'Photos Orphelines',
+          value: '$unusedCount',
+          subtitle: unusedCount > 0 ? 'Suppression autorisée' : 'Aucune photo à purger',
+          icon: Icons.warning_amber_rounded,
+          color: unusedCount > 0 ? Colors.amber : Colors.white38,
+        );
+
+        Widget searchField = TextField(
+          controller: _searchCtrl,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Rechercher par nom, plat, restaurant...',
+            hintStyle: const TextStyle(color: Colors.white38),
+            prefixIcon: const Icon(Icons.search, color: Colors.white54),
+            suffixIcon: _searchCtrl.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, color: Colors.white54),
+                    onPressed: () {
+                      _searchCtrl.clear();
+                      _searchQuery = '';
+                      _applyFilters();
+                    },
+                  )
+                : null,
+            filled: true,
+            fillColor: Colors.black26,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          onChanged: (val) {
+            _searchQuery = val;
+            _applyFilters();
+          },
+        );
+
+        Widget statusFilter = DropdownButton<String>(
+          value: _selectedStatusFilter,
+          dropdownColor: const Color(0xFF162018),
+          style: const TextStyle(color: Colors.white, fontSize: 13),
+          underline: const SizedBox(),
+          items: [
+            DropdownMenuItem(value: 'all', child: Text('Tous statuts (${_allFiles.length})')),
+            DropdownMenuItem(value: 'used', child: Text('✅ Utilisées ($usedCount)')),
+            DropdownMenuItem(value: 'unused', child: Text('⚠️ Orphelines ($unusedCount)')),
+          ],
+          onChanged: (val) {
+            if (val != null) {
+              setState(() {
+                _selectedStatusFilter = val;
+                _applyFilters();
+              });
+            }
+          },
+        );
+
+        Widget folderFilter = DropdownButton<String>(
+          value: _selectedFolderFilter,
+          dropdownColor: const Color(0xFF162018),
+          style: const TextStyle(color: Colors.white, fontSize: 13),
+          underline: const SizedBox(),
+          items: const [
+            DropdownMenuItem(value: 'all', child: Text('📁 Tous les dossiers')),
+            DropdownMenuItem(value: 'dishes', child: Text('🍽️ Plats (dishes)')),
+            DropdownMenuItem(value: 'restaurants', child: Text('🏪 Restaurants')),
+            DropdownMenuItem(value: 'carousels', child: Text('🎨 Carrousels')),
+            DropdownMenuItem(value: 'categories', child: Text('🏷️ Catégories')),
+            DropdownMenuItem(value: 'general', child: Text('📦 Général')),
+          ],
+          onChanged: (val) {
+            if (val != null) {
+              setState(() {
+                _selectedFolderFilter = val;
+                _applyFilters();
+              });
+            }
+          },
+        );
+
+        Widget sortFilter = DropdownButton<String>(
+          value: _selectedSort,
+          dropdownColor: const Color(0xFF162018),
+          style: const TextStyle(color: Colors.white, fontSize: 13),
+          underline: const SizedBox(),
+          items: const [
+            DropdownMenuItem(value: 'recent', child: Text('⏱️ Plus récentes')),
+            DropdownMenuItem(value: 'oldest', child: Text('⏳ Plus anciennes')),
+            DropdownMenuItem(value: 'size_desc', child: Text('💾 Plus lourdes')),
+            DropdownMenuItem(value: 'size_asc', child: Text('🪶 Plus légères')),
+            DropdownMenuItem(value: 'usage_desc', child: Text('🔥 Plus utilisées')),
+          ],
+          onChanged: (val) {
+            if (val != null) {
+              setState(() {
+                _selectedSort = val;
+                _applyFilters();
+              });
+            }
+          },
+        );
+
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Padding(
+            padding: EdgeInsets.all(isMobile ? 12.0 : 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                // Titre & Boutons
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 12,
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.emeraldGreen.withValues(alpha: 0.25),
-                            AppTheme.emeraldGreen.withValues(alpha: 0.08),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.4), width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.emeraldGreen.withValues(alpha: 0.2),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.photo_library, color: AppTheme.emeraldGreen, size: 28),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
+                        Container(
+                          width: isMobile ? 42 : 52,
+                          height: isMobile ? 42 : 52,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppTheme.emeraldGreen.withValues(alpha: 0.25),
+                                AppTheme.emeraldGreen.withValues(alpha: 0.08),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.4), width: 1.5),
+                          ),
+                          child: Center(
+                            child: Icon(Icons.photo_library, color: AppTheme.emeraldGreen, size: isMobile ? 22 : 28),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Bibliothèque Photos',
-                              style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Bibliothèque Photos',
+                                  style: TextStyle(color: Colors.white, fontSize: isMobile ? 20 : 26, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(width: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.4),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: Colors.white24),
+                                  ),
+                                  child: const Text('OVH', style: TextStyle(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.w600)),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.4),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.white24),
+                            if (!isMobile) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                'Inventaire et traçabilité des photos OVH',
+                                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
                               ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.cloud_done, color: AppTheme.emeraldGreen, size: 14),
-                                  SizedBox(width: 6),
-                                  Text('Serveur OVH', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
-                                ],
-                              ),
-                            ),
+                            ],
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Inventaire, traçabilité des usages, dates de publication et suppression des photos orphelines',
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14),
+                      ],
+                    ),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (unusedCount > 0)
+                          ElevatedButton.icon(
+                            onPressed: (_isLoading || _isActionInProgress) ? null : _purgeAllOrphanPhotos,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.redAccent.withValues(alpha: 0.2),
+                              foregroundColor: Colors.redAccent,
+                              side: const BorderSide(color: Colors.redAccent),
+                              padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            icon: const Icon(Icons.cleaning_services, size: 16),
+                            label: Text('Purger ($unusedCount)', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ElevatedButton.icon(
+                          onPressed: (_isLoading || _isActionInProgress) ? null : _loadData,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.emeraldGreen,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(horizontal: isMobile ? 14 : 18, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: (_isLoading || _isActionInProgress)
+                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Icon(Icons.refresh, size: 18),
+                          label: const Text('Actualiser', style: TextStyle(fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    if (unusedCount > 0)
-                      ElevatedButton.icon(
-                        onPressed: (_isLoading || _isActionInProgress) ? null : _purgeAllOrphanPhotos,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.redAccent.withValues(alpha: 0.2),
-                          foregroundColor: Colors.redAccent,
-                          side: const BorderSide(color: Colors.redAccent),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        icon: const Icon(Icons.cleaning_services, size: 18),
-                        label: Text('Purger Orphelines ($unusedCount)', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                    const SizedBox(width: 12),
-                    ElevatedButton.icon(
-                      onPressed: (_isLoading || _isActionInProgress) ? null : _loadData,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.emeraldGreen,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      icon: (_isLoading || _isActionInProgress)
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(Icons.refresh),
-                      label: const Text('Actualiser', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-            // Cartes KPI
-            Row(
-              children: [
-                _buildKpiCard(
-                  title: 'Total Photos OVH',
-                  value: '${_allFiles.length}',
-                  subtitle: 'Fichiers hébergés',
-                  icon: Icons.photo_library,
-                  color: Colors.blueAccent,
-                ),
-                const SizedBox(width: 16),
-                _buildKpiCard(
-                  title: 'Espace Disque',
-                  value: _totalSizeFormatted,
-                  subtitle: '$_totalSizeBytes octets',
-                  icon: Icons.storage,
-                  color: Colors.purpleAccent,
-                ),
-                const SizedBox(width: 16),
-                _buildKpiCard(
-                  title: 'Photos Utilisées',
-                  value: '$usedCount',
-                  subtitle: _allFiles.isEmpty ? '0%' : '${((usedCount / _allFiles.length) * 100).toStringAsFixed(0)}% du catalogue',
-                  icon: Icons.check_circle_outline,
-                  color: AppTheme.emeraldGreen,
-                ),
-                const SizedBox(width: 16),
-                _buildKpiCard(
-                  title: 'Photos Orphelines',
-                  value: '$unusedCount',
-                  subtitle: unusedCount > 0 ? 'Suppression autorisée' : 'Aucune photo à purger',
-                  icon: Icons.warning_amber_rounded,
-                  color: unusedCount > 0 ? Colors.amber : Colors.white38,
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Barre de Filtres & Recherche
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-              ),
-              child: Row(
-                children: [
-                  // Recherche
-                  Expanded(
-                    flex: 3,
-                    child: TextField(
-                      controller: _searchCtrl,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Rechercher par nom de fichier, plat, restaurant...',
-                        hintStyle: const TextStyle(color: Colors.white38),
-                        prefixIcon: const Icon(Icons.search, color: Colors.white54),
-                        suffixIcon: _searchCtrl.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, color: Colors.white54),
-                                onPressed: () {
-                                  _searchCtrl.clear();
-                                  _searchQuery = '';
-                                  _applyFilters();
-                                },
-                              )
-                            : null,
-                        filled: true,
-                        fillColor: Colors.black26,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                      onChanged: (val) {
-                        _searchQuery = val;
-                        _applyFilters();
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-
-                  // Filtre Utilisation
-                  DropdownButton<String>(
-                    value: _selectedStatusFilter,
-                    dropdownColor: const Color(0xFF162018),
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                    underline: const SizedBox(),
-                    items: [
-                      DropdownMenuItem(value: 'all', child: Text('Tous statuts (${_allFiles.length})')),
-                      DropdownMenuItem(value: 'used', child: Text('✅ Utilisées ($usedCount)')),
-                      DropdownMenuItem(value: 'unused', child: Text('⚠️ Orphelines ($unusedCount)')),
+                // Cartes KPI
+                if (isNarrow) ...[
+                  Row(
+                    children: [
+                      Expanded(child: kpi1),
+                      const SizedBox(width: 12),
+                      Expanded(child: kpi2),
                     ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() {
-                          _selectedStatusFilter = val;
-                          _applyFilters();
-                        });
-                      }
-                    },
                   ),
-                  const SizedBox(width: 16),
-
-                  // Filtre Dossier
-                  DropdownButton<String>(
-                    value: _selectedFolderFilter,
-                    dropdownColor: const Color(0xFF162018),
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                    underline: const SizedBox(),
-                    items: const [
-                      DropdownMenuItem(value: 'all', child: Text('📁 Tous les dossiers')),
-                      DropdownMenuItem(value: 'dishes', child: Text('🍽️ Plats (dishes)')),
-                      DropdownMenuItem(value: 'restaurants', child: Text('🏪 Restaurants')),
-                      DropdownMenuItem(value: 'carousels', child: Text('🎨 Carrousels')),
-                      DropdownMenuItem(value: 'categories', child: Text('🏷️ Catégories')),
-                      DropdownMenuItem(value: 'general', child: Text('📦 Général')),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: kpi3),
+                      const SizedBox(width: 12),
+                      Expanded(child: kpi4),
                     ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() {
-                          _selectedFolderFilter = val;
-                          _applyFilters();
-                        });
-                      }
-                    },
                   ),
-                  const SizedBox(width: 16),
-
-                  // Tri
-                  DropdownButton<String>(
-                    value: _selectedSort,
-                    dropdownColor: const Color(0xFF162018),
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                    underline: const SizedBox(),
-                    items: const [
-                      DropdownMenuItem(value: 'recent', child: Text('⏱️ Plus récentes')),
-                      DropdownMenuItem(value: 'oldest', child: Text('⏳ Plus anciennes')),
-                      DropdownMenuItem(value: 'size_desc', child: Text('💾 Plus lourdes')),
-                      DropdownMenuItem(value: 'size_asc', child: Text('🪶 Plus légères')),
-                      DropdownMenuItem(value: 'usage_desc', child: Text('🔥 Plus utilisées')),
+                ] else ...[
+                  Row(
+                    children: [
+                      Expanded(child: kpi1),
+                      const SizedBox(width: 16),
+                      Expanded(child: kpi2),
+                      const SizedBox(width: 16),
+                      Expanded(child: kpi3),
+                      const SizedBox(width: 16),
+                      Expanded(child: kpi4),
                     ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() {
-                          _selectedSort = val;
-                          _applyFilters();
-                        });
-                      }
-                    },
                   ),
                 ],
-              ),
-            ),
+                const SizedBox(height: 16),
+
+                // Barre de Filtres & Recherche
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  ),
+                  child: isNarrow
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            searchField,
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 8,
+                              children: [
+                                statusFilter,
+                                folderFilter,
+                                sortFilter,
+                              ],
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Expanded(flex: 3, child: searchField),
+                            const SizedBox(width: 16),
+                            statusFilter,
+                            const SizedBox(width: 16),
+                            folderFilter,
+                            const SizedBox(width: 16),
+                            sortFilter,
+                          ],
+                        ),
+                ),
+                const SizedBox(height: 16),
             const SizedBox(height: 20),
 
             // Grille de Photos
@@ -1119,6 +1158,8 @@ class _PhotoLibraryTabState extends State<PhotoLibraryTab> {
         ),
       ),
     );
+      },
+    );
   }
 
   Widget _buildKpiCard({
@@ -1128,9 +1169,8 @@ class _PhotoLibraryTabState extends State<PhotoLibraryTab> {
     required IconData icon,
     required Color color,
   }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
+    return Container(
+      padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(14),
@@ -1161,8 +1201,7 @@ class _PhotoLibraryTabState extends State<PhotoLibraryTab> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildPhotoCard(OvhMediaFile file) {

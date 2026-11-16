@@ -70,34 +70,42 @@ class _CarouselTabState extends State<CarouselTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 700;
+
+        return Padding(
+          padding: EdgeInsets.all(isMobile ? 12.0 : 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Bannières Accueil',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+              Wrap(
+                spacing: 16,
+                runSpacing: 12,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'Bannières Accueil',
+                    style: TextStyle(
+                      fontSize: isMobile ? 22 : 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _showAddCarouselDialog(context),
+                    icon: const Icon(Icons.add, size: 18),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.emeraldGreen,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: isMobile ? 14 : 20, vertical: 12),
+                    ),
+                    label: Text(isMobile ? 'Nouvelle' : 'Nouvelle Bannière'),
+                  ),
+                ],
               ),
-              ElevatedButton.icon(
-                onPressed: () => _showAddCarouselDialog(context),
-                icon: const Icon(Icons.add),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.emeraldGreen,
-                  foregroundColor: Colors.white,
-                ),
-                label: const Text('Nouvelle Bannière'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
+              const SizedBox(height: 16),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('carousels').orderBy('sortOrder', descending: false).snapshots(),
@@ -213,6 +221,8 @@ class _CarouselTabState extends State<CarouselTab> {
           ),
         ],
       ),
+    );
+      },
     );
   }
 }

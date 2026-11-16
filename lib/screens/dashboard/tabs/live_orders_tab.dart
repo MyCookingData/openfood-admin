@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -23,43 +25,51 @@ class _LiveOrdersTabState extends State<LiveOrdersTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 768;
+
+        return Padding(
+          padding: EdgeInsets.all(isMobile ? 12.0 : 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Suivi en Direct',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.redAccent.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.redAccent),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Mode Administrateur',
-                      style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+              Wrap(
+                spacing: 16,
+                runSpacing: 12,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'Suivi en Direct',
+                    style: TextStyle(
+                      fontSize: isMobile ? 24 : 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                  ],
-                ),
-              )
-            ],
-          ),
-          const SizedBox(height: 16),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.redAccent),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'Mode Administrateur',
+                          style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  )
+                ],
+              ),
+              const SizedBox(height: 16),
           // FILTRES
           GlassContainer(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -267,18 +277,23 @@ class _LiveOrdersTabState extends State<LiveOrdersTab> {
                 }
 
                 return LayoutBuilder(
-                  builder: (context, constraints) {
+                  builder: (context, gridConstraints) {
                     int crossAxisCount = 3;
-                    if (constraints.maxWidth < 800) {
+                    if (gridConstraints.maxWidth < 768) {
                       crossAxisCount = 1;
-                    } else if (constraints.maxWidth < 1300) crossAxisCount = 2;
+                    } else if (gridConstraints.maxWidth < 1250) {
+                      crossAxisCount = 2;
+                    }
+
+                    final extent = gridConstraints.maxWidth < 650 ? 520.0 : 480.0;
+                    final spacing = gridConstraints.maxWidth < 650 ? 12.0 : 20.0;
 
                     return GridView.builder(
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: crossAxisCount,
-                        mainAxisExtent: 440,
-                        crossAxisSpacing: 24,
-                        mainAxisSpacing: 24,
+                        mainAxisExtent: extent,
+                        crossAxisSpacing: spacing,
+                        mainAxisSpacing: spacing,
                       ),
                       itemCount: orders.length,
                       itemBuilder: (context, index) {
@@ -292,6 +307,8 @@ class _LiveOrdersTabState extends State<LiveOrdersTab> {
           ),
         ],
       ),
+    );
+      },
     );
   }
 }
@@ -359,15 +376,38 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
     super.dispose();
   }
 
-  Future<void> _handleCapturePayment(String orderId) async {
+    Future<void> _handleCapturePayment(String orderId) async {
     setState(() => _isProcessingAction = true);
     try {
-      final callable = FirebaseFunctions.instance.httpsCallable('captureOrderPayment');
-      await callable.call({'orderId': orderId});
+      final doc = await FirebaseFirestore.instance.collection('orders').doc(orderId).get();
+      final data = doc.data() ?? {};
+      final paymentIntentId = data['stripePaymentIntentId'] as String?;
+
+      if (paymentIntentId != null && paymentIntentId.isNotEmpty && !paymentIntentId.startsWith('pi_mock')) {
+        final response = await http.post(
+          Uri.parse('https://openfood.fr/api/manage_payment_intent.php'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'paymentIntentId': paymentIntentId,
+            'action': 'capture',
+          }),
+        );
+        if (response.statusCode != 200) {
+          final resData = jsonDecode(response.body);
+          throw Exception(resData['error'] ?? "Erreur lors du débit Stripe (Code ${response.statusCode})");
+        }
+      }
+
+      await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
+        'paymentStatus': 'captured',
+        'status': 1,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Paiement Stripe capturé avec succès. Commande acceptée !'),
+            content: Text('Paiement Stripe débité avec succès. Commande acceptée !'),
             backgroundColor: AppTheme.emeraldGreen,
           ),
         );
@@ -376,25 +416,8 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.error_outline, color: Colors.white),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Échec du débit bancaire Stripe : $e',
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-          duration: const Duration(seconds: 15),
+          content: Text('Erreur : $e', style: const TextStyle(color: Colors.white, fontSize: 13)),
           backgroundColor: Colors.redAccent,
-          action: SnackBarAction(
-            label: 'Valider quand même',
-            textColor: Colors.yellowAccent,
-            onPressed: () => _forceValidateOrder(orderId),
-          ),
         ),
       );
     } finally {
@@ -408,11 +431,12 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
       await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
         'paymentStatus': 'captured_manual_override',
         'status': 1,
+        'updatedAt': FieldValue.serverTimestamp(),
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Commande validée manuellement (Mode Débogage).'),
+            content: Text('Commande validée manuellement.'),
             backgroundColor: Colors.orangeAccent,
           ),
         );
@@ -420,7 +444,7 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors du forçage: $e'), backgroundColor: Colors.redAccent),
+          SnackBar(content: Text('Erreur : $e'), backgroundColor: Colors.redAccent),
         );
       }
     } finally {
@@ -431,8 +455,27 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
   Future<void> _handleCancelPayment(String orderId) async {
     setState(() => _isProcessingAction = true);
     try {
-      final callable = FirebaseFunctions.instance.httpsCallable('cancelOrderPayment');
-      await callable.call({'orderId': orderId});
+      final doc = await FirebaseFirestore.instance.collection('orders').doc(orderId).get();
+      final data = doc.data() ?? {};
+      final paymentIntentId = data['stripePaymentIntentId'] as String?;
+
+      if (paymentIntentId != null && paymentIntentId.isNotEmpty && !paymentIntentId.startsWith('pi_mock')) {
+        await http.post(
+          Uri.parse('https://openfood.fr/api/manage_payment_intent.php'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'paymentIntentId': paymentIntentId,
+            'action': 'cancel',
+          }),
+        );
+      }
+
+      await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
+        'paymentStatus': 'cancelled',
+        'status': 4,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -445,25 +488,8 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.error_outline, color: Colors.white),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Échec de l\'annulation Stripe : $e',
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-          duration: const Duration(seconds: 15),
+          content: Text('Erreur : $e', style: const TextStyle(color: Colors.white, fontSize: 13)),
           backgroundColor: Colors.redAccent,
-          action: SnackBarAction(
-            label: 'Refuser quand même',
-            textColor: Colors.yellowAccent,
-            onPressed: () => _forceCancelOrder(orderId),
-          ),
         ),
       );
     } finally {
@@ -471,25 +497,30 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
     }
   }
 
-  Future<void> _forceCancelOrder(String orderId) async {
+  Future<void> _updateStatusDirect(String orderId, int newStatus) async {
     setState(() => _isProcessingAction = true);
     try {
-      await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
-        'paymentStatus': 'cancelled_manual_override',
-        'status': 4,
-      });
+      final updateData = <String, dynamic>{
+        'status': newStatus,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      if (newStatus == 3) {
+        updateData['deliveredAt'] = FieldValue.serverTimestamp();
+      }
+      await FirebaseFirestore.instance.collection('orders').doc(orderId).update(updateData);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Commande refusée manuellement (Mode Débogage).'),
-            backgroundColor: Colors.orangeAccent,
+          SnackBar(
+            content: Text('Statut de la commande mis à jour : ${_getStatusText(newStatus, 0)}'),
+            backgroundColor: AppTheme.emeraldGreen,
+            duration: const Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors du forçage: $e'), backgroundColor: Colors.redAccent),
+          SnackBar(content: Text('Erreur : $e'), backgroundColor: Colors.redAccent),
         );
       }
     } finally {
@@ -678,30 +709,65 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
               Text('${order.totalAmount.toStringAsFixed(2)} €', style: const TextStyle(color: AppTheme.emeraldGreen, fontWeight: FontWeight.bold, fontSize: 18)),
             ],
           ),
-          if (order.paymentStatus == 'pending' && order.status == 0) ...[
+          if (_isProcessingAction)
+            const Padding(
+              padding: EdgeInsets.only(top: 12.0),
+              child: Center(child: CircularProgressIndicator(color: AppTheme.emeraldGreen)),
+            )
+          else if (order.paymentStatus == 'pending' && order.status == 0) ...[
             const SizedBox(height: 16),
-            if (_isProcessingAction)
-              const Center(child: CircularProgressIndicator(color: AppTheme.emeraldGreen))
-            else
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _handleCancelPayment(order.id),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, padding: const EdgeInsets.symmetric(vertical: 12)),
-                      child: const Text('Refuser (Annuler)', style: TextStyle(color: Colors.white, fontSize: 12)),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => _handleCancelPayment(order.id),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, padding: const EdgeInsets.symmetric(vertical: 12)),
+                    child: const Text('Refuser (Annuler)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => _handleCapturePayment(order.id),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.emeraldGreen, padding: const EdgeInsets.symmetric(vertical: 12)),
+                    child: const Text('Accepter (Débiter)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                  ),
+                ),
+              ],
+            )
+          ] else ...[
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Changer statut :', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                PopupMenuButton<int>(
+                  tooltip: 'Modifier le statut de la commande',
+                  color: AppTheme.lighterDarkBackground,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white12,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white24),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Modifier ▾', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _handleCapturePayment(order.id),
-                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.emeraldGreen, padding: const EdgeInsets.symmetric(vertical: 12)),
-                      child: const Text('Accepter (Débiter)', style: TextStyle(color: Colors.white, fontSize: 12)),
-                    ),
-                  ),
-                ],
-              )
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 1, child: Text('🧑‍🍳 En Préparation (Statut 1)', style: TextStyle(color: Colors.white))),
+                    const PopupMenuItem(value: 2, child: Text('🛵 En Route (Statut 2)', style: TextStyle(color: Colors.white))),
+                    const PopupMenuItem(value: 3, child: Text('✅ Livré (Statut 3)', style: TextStyle(color: Colors.white))),
+                    const PopupMenuItem(value: 4, child: Text('❌ Annulé (Statut 4)', style: TextStyle(color: Colors.white))),
+                  ],
+                  onSelected: (newStatus) => _updateStatusDirect(order.id, newStatus),
+                ),
+              ],
+            )
           ]
         ],
       ),

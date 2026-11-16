@@ -23,34 +23,42 @@ class CategoriesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 700;
+
+        return Padding(
+          padding: EdgeInsets.all(isMobile ? 12.0 : 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Catégories de Produits',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+              Wrap(
+                spacing: 16,
+                runSpacing: 12,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'Catégories de Produits',
+                    style: TextStyle(
+                      fontSize: isMobile ? 22 : 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _showAddCategoryDialog(context),
+                    icon: const Icon(Icons.add, size: 18),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.emeraldGreen,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: isMobile ? 14 : 20, vertical: 12),
+                    ),
+                    label: Text(isMobile ? 'Nouvelle' : 'Nouvelle Catégorie'),
+                  )
+                ],
               ),
-              ElevatedButton.icon(
-                onPressed: () => _showAddCategoryDialog(context),
-                icon: const Icon(Icons.add),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.emeraldGreen,
-                  foregroundColor: Colors.white,
-                ),
-                label: const Text('Nouvelle Catégorie'),
-              )
-            ],
-          ),
-          const SizedBox(height: 24),
+              const SizedBox(height: 16),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('categories').orderBy('order').snapshots(),
@@ -154,6 +162,8 @@ class CategoriesTab extends StatelessWidget {
         ],
       ),
     );
+      },
+    );
   }
 }
 
@@ -220,8 +230,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
     return AlertDialog(
       backgroundColor: AppTheme.darkBackground,
       title: Text(widget.category == null ? 'Nouvelle Catégorie' : 'Modifier Catégorie', style: const TextStyle(color: Colors.white)),
-      content: SizedBox(
-        width: 400,
+      content: Container(
+        constraints: const BoxConstraints(maxWidth: 400),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

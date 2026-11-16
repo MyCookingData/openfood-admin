@@ -76,9 +76,35 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
       if (mounted) {
         Navigator.of(context).pop(true); // Return success
       }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        String msg;
+        switch (e.code) {
+          case 'email-already-in-use':
+            msg = "Cette adresse e-mail est déjà associée à un compte.";
+            break;
+          case 'invalid-email':
+            msg = "L'adresse e-mail saisie n'a pas un format valide.";
+            break;
+          case 'weak-password':
+            msg = "Le mot de passe doit comporter au moins 6 caractères.";
+            break;
+          case 'operation-not-allowed':
+            msg = "L'authentification par email/mot de passe n'est pas activée.";
+            break;
+          default:
+            msg = e.message ?? "Une erreur est survenue lors de la création du compte.";
+        }
+        setState(() => _errorMessage = msg);
+      }
     } catch (e) {
       if (mounted) {
-        setState(() => _errorMessage = e.toString());
+        final errStr = e.toString();
+        if (errStr.contains('email-already-in-use')) {
+          setState(() => _errorMessage = "Cette adresse e-mail est déjà associée à un compte.");
+        } else {
+          setState(() => _errorMessage = "Erreur : $errStr");
+        }
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -87,13 +113,16 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Dialog(
       backgroundColor: Colors.transparent,
       child: GlassContainer(
-        padding: const EdgeInsets.all(32),
-        child: SizedBox(
-          width: 500,
-          child: Form(
+        padding: EdgeInsets.all(isMobile ? 16 : 28),
+        child: SingleChildScrollView(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: Form(
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -175,8 +204,9 @@ class _CreateUserDialogState extends State<CreateUserDialog> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTextField(String label, TextEditingController controller, IconData icon, {bool obscure = false}) {
     return TextFormField(

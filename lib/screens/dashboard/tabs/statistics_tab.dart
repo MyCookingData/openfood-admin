@@ -78,73 +78,90 @@ class _StatisticsTabState extends State<StatisticsTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 768;
+
+        return Padding(
+          padding: EdgeInsets.all(isMobile ? 12.0 : 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Analytique 360°', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
-              Row(
+              Wrap(
+                spacing: 16,
+                runSpacing: 12,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance.collection('restaurants').snapshots(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const SizedBox();
-                      final restaurants = snapshot.data!.docs;
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(8)),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String?>(
-                            value: _selectedRestaurantName,
-                            dropdownColor: AppTheme.lighterDarkBackground,
-                            hint: const Text('Tous les restaurants', style: TextStyle(color: Colors.white70)),
-                            style: const TextStyle(color: Colors.white),
-                            icon: const Icon(Icons.arrow_drop_down, color: AppTheme.emeraldGreen),
-                            items: [
-                              const DropdownMenuItem<String?>(value: null, child: Text('Tous les restaurants')),
-                              ...restaurants.map((doc) => DropdownMenuItem<String?>(value: (doc['name'] as String? ?? '').toLowerCase(), child: Text(doc['name'] as String? ?? ''))),
-                            ],
-                            onChanged: (val) => setState(() => _selectedRestaurantName = val),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 16),
-                  Container(
-                    decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(8)),
-                    child: Row(
-                      children: [
-                        TextButton.icon(
-                          onPressed: () async {
-                            final range = await showDateRangePicker(
-                              context: context,
-                              initialDateRange: _selectedDateRange,
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime.now(),
-                            );
-                            if (range != null) setState(() => _selectedDateRange = range);
-                          },
-                          icon: const Icon(Icons.calendar_today, color: AppTheme.emeraldGreen, size: 18),
-                          label: Text(
-                            _selectedDateRange != null ? '${DateFormat('dd/MM/yy').format(_selectedDateRange!.start)} - ${DateFormat('dd/MM/yy').format(_selectedDateRange!.end)}' : 'Toutes les dates',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                        if (_selectedDateRange != null)
-                          IconButton(icon: const Icon(Icons.close, color: Colors.redAccent, size: 18), onPressed: () => setState(() => _selectedDateRange = null)),
-                      ],
+                  Text(
+                    'Analytique 360°',
+                    style: TextStyle(
+                      fontSize: isMobile ? 24 : 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance.collection('restaurants').snapshots(),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) return const SizedBox();
+                          final restaurants = snapshot.data!.docs;
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(8)),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String?>(
+                                value: _selectedRestaurantName,
+                                dropdownColor: AppTheme.lighterDarkBackground,
+                                hint: const Text('Tous les restaurants', style: TextStyle(color: Colors.white70)),
+                                style: const TextStyle(color: Colors.white),
+                                icon: const Icon(Icons.arrow_drop_down, color: AppTheme.emeraldGreen),
+                                items: [
+                                  const DropdownMenuItem<String?>(value: null, child: Text('Tous les restaurants')),
+                                  ...restaurants.map((doc) => DropdownMenuItem<String?>(value: (doc['name'] as String? ?? '').toLowerCase(), child: Text(doc['name'] as String? ?? ''))),
+                                ],
+                                onChanged: (val) => setState(() => _selectedRestaurantName = val),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      Container(
+                        decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(8)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextButton.icon(
+                              onPressed: () async {
+                                final range = await showDateRangePicker(
+                                  context: context,
+                                  initialDateRange: _selectedDateRange,
+                                  firstDate: DateTime(2020),
+                                  lastDate: DateTime.now(),
+                                );
+                                if (range != null) setState(() => _selectedDateRange = range);
+                              },
+                              icon: const Icon(Icons.calendar_today, color: AppTheme.emeraldGreen, size: 18),
+                              label: Text(
+                                _selectedDateRange != null ? '${DateFormat('dd/MM/yy').format(_selectedDateRange!.start)} - ${DateFormat('dd/MM/yy').format(_selectedDateRange!.end)}' : 'Toutes les dates',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            if (_selectedDateRange != null)
+                              IconButton(icon: const Icon(Icons.close, color: Colors.redAccent, size: 18), onPressed: () => setState(() => _selectedDateRange = null)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
                 ],
-              )
-            ],
-          ),
-          const SizedBox(height: 24),
+              ),
+              const SizedBox(height: 24),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('orders').snapshots(),
@@ -241,56 +258,103 @@ class _StatisticsTabState extends State<StatisticsTab> {
                 int uniqueCustomers = customers.values.where((c) => c.orderCount == 1).length;
                 int recurringCustomers = customers.values.where((c) => c.orderCount > 1).length;
 
+                final screenWidth = constraints.maxWidth;
+                final isNarrow = screenWidth < 1050;
+                final isVeryNarrow = screenWidth < 700;
+
+                Widget kpi1 = _buildKpiCard('Chiffre d\'Affaires', '${totalCA.toStringAsFixed(2)} €', Icons.account_balance_wallet, AppTheme.emeraldGreen);
+                Widget kpi2 = _buildKpiCard('Commandes Livrées', '${deliveredDocs.length}', Icons.check_circle_outline, Colors.blueAccent);
+                Widget kpi3 = _buildKpiCard('Panier Moyen', '${aov.toStringAsFixed(2)} €', Icons.shopping_basket, Colors.purpleAccent);
+                Widget kpi4 = _buildKpiCard('Taux Annulation', '${cancelRate.toStringAsFixed(1)} %', Icons.cancel, Colors.redAccent);
+
                 return SingleChildScrollView(
                   child: Column(
                     children: [
                       // KPIs
-                      Row(
-                        children: [
-                          Expanded(child: _buildKpiCard('Chiffre d\'Affaires', '${totalCA.toStringAsFixed(2)} €', Icons.account_balance_wallet, AppTheme.emeraldGreen)),
-                          const SizedBox(width: 16),
-                          Expanded(child: _buildKpiCard('Commandes Livrées', '${deliveredDocs.length}', Icons.check_circle_outline, Colors.blueAccent)),
-                          const SizedBox(width: 16),
-                          Expanded(child: _buildKpiCard('Panier Moyen', '${aov.toStringAsFixed(2)} €', Icons.shopping_basket, Colors.purpleAccent)),
-                          const SizedBox(width: 16),
-                          Expanded(child: _buildKpiCard('Taux Annulation', '${cancelRate.toStringAsFixed(1)} %', Icons.cancel, Colors.redAccent)),
-                        ],
-                      ),
+                      if (screenWidth < 900) ...[
+                        Row(
+                          children: [
+                            Expanded(child: kpi1),
+                            const SizedBox(width: 12),
+                            Expanded(child: kpi2),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(child: kpi3),
+                            const SizedBox(width: 12),
+                            Expanded(child: kpi4),
+                          ],
+                        ),
+                      ] else ...[
+                        Row(
+                          children: [
+                            Expanded(child: kpi1),
+                            const SizedBox(width: 16),
+                            Expanded(child: kpi2),
+                            const SizedBox(width: 16),
+                            Expanded(child: kpi3),
+                            const SizedBox(width: 16),
+                            Expanded(child: kpi4),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       
                       // Ligne 2: Timeline et Top Clients
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(flex: 3, child: SizedBox(height: 350, child: _buildTimelineChart(revenueTimeline, ordersTimeline, isSingleDay))),
-                          const SizedBox(width: 24),
-                          Expanded(flex: 1, child: SizedBox(height: 350, child: _buildTopCustomers(customers.values.toList()))),
-                        ],
-                      ),
+                      if (screenWidth < 950) ...[
+                        SizedBox(height: 320, child: _buildTimelineChart(revenueTimeline, ordersTimeline, isSingleDay)),
+                        const SizedBox(height: 16),
+                        SizedBox(height: 320, child: _buildTopCustomers(customers.values.toList())),
+                      ] else ...[
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(flex: 3, child: SizedBox(height: 350, child: _buildTimelineChart(revenueTimeline, ordersTimeline, isSingleDay))),
+                            const SizedBox(width: 24),
+                            Expanded(flex: 1, child: SizedBox(height: 350, child: _buildTopCustomers(customers.values.toList()))),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 24),
 
                       // Ligne 3: Heures de Pointe et Jours de la semaine
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(flex: 1, child: SizedBox(height: 300, child: _buildRushHoursChart(rushHours))),
-                          const SizedBox(width: 24),
-                          Expanded(flex: 1, child: SizedBox(height: 300, child: _buildWeekdayChart(weekdayOrders))),
-                        ],
-                      ),
+                      if (screenWidth < 850) ...[
+                        SizedBox(height: 280, child: _buildRushHoursChart(rushHours)),
+                        const SizedBox(height: 16),
+                        SizedBox(height: 280, child: _buildWeekdayChart(weekdayOrders)),
+                      ] else ...[
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(flex: 1, child: SizedBox(height: 300, child: _buildRushHoursChart(rushHours))),
+                            const SizedBox(width: 24),
+                            Expanded(flex: 1, child: SizedBox(height: 300, child: _buildWeekdayChart(weekdayOrders))),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 24),
 
                       // Ligne 4: Parts de marché
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(flex: 1, child: SizedBox(height: 250, child: _buildPieChart('Revenus par Produit', productRevenue, true))),
-                          const SizedBox(width: 24),
-                          Expanded(flex: 1, child: SizedBox(height: 250, child: _buildPieChart('Villes de Livraison', cityCount.map((k, v) => MapEntry(k, v.toDouble())), false))),
-                          const SizedBox(width: 24),
-                          Expanded(flex: 1, child: SizedBox(height: 250, child: _buildPieChart('Fidélité Clients', {'Unique (1 cmd)': uniqueCustomers.toDouble(), 'Fidèles (>1 cmd)': recurringCustomers.toDouble()}, false))),
-                        ],
-                      ),
+                      if (isNarrow) ...[
+                        SizedBox(height: 240, child: _buildPieChart('Revenus par Produit', productRevenue, true)),
+                        const SizedBox(height: 16),
+                        SizedBox(height: 240, child: _buildPieChart('Villes de Livraison', cityCount.map((k, v) => MapEntry(k, v.toDouble())), false)),
+                        const SizedBox(height: 16),
+                        SizedBox(height: 240, child: _buildPieChart('Fidélité Clients', {'Unique (1 cmd)': uniqueCustomers.toDouble(), 'Fidèles (>1 cmd)': recurringCustomers.toDouble()}, false)),
+                      ] else ...[
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(flex: 1, child: SizedBox(height: 250, child: _buildPieChart('Revenus par Produit', productRevenue, true))),
+                            const SizedBox(width: 24),
+                            Expanded(flex: 1, child: SizedBox(height: 250, child: _buildPieChart('Villes de Livraison', cityCount.map((k, v) => MapEntry(k, v.toDouble())), false))),
+                            const SizedBox(width: 24),
+                            Expanded(flex: 1, child: SizedBox(height: 250, child: _buildPieChart('Fidélité Clients', {'Unique (1 cmd)': uniqueCustomers.toDouble(), 'Fidèles (>1 cmd)': recurringCustomers.toDouble()}, false))),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 24),
 
                       // Ligne 5: Top Addons
@@ -304,6 +368,8 @@ class _StatisticsTabState extends State<StatisticsTab> {
           ),
         ],
       ),
+    );
+      },
     );
   }
 
