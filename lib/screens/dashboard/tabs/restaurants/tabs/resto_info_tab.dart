@@ -71,11 +71,35 @@ class _RestoInfoTabState extends State<RestoInfoTab> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant RestoInfoTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.restaurant.id != widget.restaurant.id) {
+      _nameCtrl.text = widget.restaurant.name;
+      _imgCtrl.text = widget.restaurant.imageUrl;
+      _typeCtrl.text = widget.restaurant.type;
+      _zoneCtrl.text = widget.restaurant.zone;
+      _latCtrl.text = widget.restaurant.lat.toString();
+      _lngCtrl.text = widget.restaurant.lng.toString();
+      _fbCtrl.text = widget.restaurant.facebook;
+      _igCtrl.text = widget.restaurant.instagram;
+      _ttCtrl.text = widget.restaurant.tiktok;
+      _stripeAccCtrl.text = widget.restaurant.stripeAccountId ?? '';
+      _status = widget.restaurant.status;
+      _initOpeningHours();
+    } else if (!_isLoading && oldWidget.restaurant.openingHours != widget.restaurant.openingHours) {
+      _initOpeningHours();
+    }
+  }
+
   void _initOpeningHours() {
-    final raw = widget.restaurant.openingHours ?? OpeningHoursHelper.defaultOpeningHours();
+    final raw = widget.restaurant.openingHours;
+    final defaults = OpeningHoursHelper.defaultOpeningHours();
     for (final day in OpeningHoursHelper.dayKeys) {
-      if (raw[day] is Map) {
+      if (raw != null && raw[day] is Map && (raw[day] as Map).isNotEmpty) {
         _schedule[day] = DaySchedule.fromJson(Map<String, dynamic>.from(raw[day] as Map));
+      } else if (defaults[day] is Map) {
+        _schedule[day] = DaySchedule.fromJson(Map<String, dynamic>.from(defaults[day] as Map));
       } else {
         _schedule[day] = const DaySchedule(isOpen: false);
       }
@@ -164,35 +188,38 @@ class _RestoInfoTabState extends State<RestoInfoTab> {
           ? double.tryParse(_startingPriceCtrl.text.trim().replaceAll(',', '.'))
           : null;
 
-      final updatedResto = RestaurantModel(
-        id: widget.restaurant.id,
-        name: _nameCtrl.text.trim(),
-        imageUrl: _imgCtrl.text.trim(),
-        rating: widget.restaurant.rating,
-        status: _status,
-        type: _typeCtrl.text.trim(),
-        zone: _zoneCtrl.text.trim(),
-        lat: double.tryParse(_latCtrl.text) ?? widget.restaurant.lat,
-        lng: double.tryParse(_lngCtrl.text) ?? widget.restaurant.lng,
-        facebook: _fbCtrl.text.trim(),
-        instagram: _igCtrl.text.trim(),
-        tiktok: _ttCtrl.text.trim(),
-        stripeAccountId: _stripeAccCtrl.text.trim().isNotEmpty ? _stripeAccCtrl.text.trim() : null,
-        openingHours: openingHoursMap,
-        startingPrice: startingPrice,
-      );
+      final dataToUpdate = <String, dynamic>{
+        'name': _nameCtrl.text.trim(),
+        'imageUrl': _imgCtrl.text.trim(),
+        'type': _typeCtrl.text.trim(),
+        'zone': _zoneCtrl.text.trim(),
+        'lat': double.tryParse(_latCtrl.text) ?? widget.restaurant.lat,
+        'lng': double.tryParse(_lngCtrl.text) ?? widget.restaurant.lng,
+        'facebook': _fbCtrl.text.trim(),
+        'instagram': _igCtrl.text.trim(),
+        'tiktok': _ttCtrl.text.trim(),
+        'stripeAccountId': _stripeAccCtrl.text.trim().isNotEmpty ? _stripeAccCtrl.text.trim() : null,
+        'status': _status,
+        'openingHours': openingHoursMap,
+        'startingPrice': startingPrice,
+      };
 
-      await FirebaseFirestore.instance.collection('restaurants').doc(widget.restaurant.id).update(updatedResto.toJson());
+      await FirebaseFirestore.instance
+          .collection('restaurants')
+          .doc(widget.restaurant.id)
+          .set(dataToUpdate, SetOptions(merge: true));
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Informations et horaires mis à jour', style: TextStyle(color: Colors.white)),
+            content: Text('Informations et horaires enregistrés avec succès !', style: TextStyle(color: Colors.white)),
             backgroundColor: AppTheme.emeraldGreen,
+            duration: Duration(seconds: 3),
           ),
         );
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur : $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur : $e'), backgroundColor: Colors.redAccent));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -266,6 +293,18 @@ class _RestoInfoTabState extends State<RestoInfoTab> {
               style: TextStyle(color: AppTheme.emeraldGreen, fontWeight: FontWeight.bold, fontSize: 18),
             ),
             const Spacer(),
+            ElevatedButton.icon(
+              onPressed: _isLoading ? null : _submitInfo,
+              icon: _isLoading
+                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.save, size: 16),
+              label: const Text('Enregistrer les horaires'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.emeraldGreen,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -336,7 +375,8 @@ class _RestoInfoTabState extends State<RestoInfoTab> {
                       activeTrackColor: AppTheme.emeraldGreen.withValues(alpha: 0.5),
                       onChanged: (val) {
                         setState(() {
-                          _schedule[dayKey] = schedule.copyWith(isOpen: val);
+                          final current = _schedule[dayKey] ?? schedule;
+                          _schedule[dayKey] = current.copyWith(isOpen: val);
                         });
                       },
                     ),
@@ -359,21 +399,24 @@ class _RestoInfoTabState extends State<RestoInfoTab> {
                     children: [
                       const Text('Service 1 :', style: TextStyle(color: Colors.white70, fontSize: 13)),
                       _buildTimeChip(schedule.open, () {
-                        _pickTime(context, schedule.open, (newVal) {
-                          _schedule[dayKey] = schedule.copyWith(open: newVal);
+                        _pickTime(context, _schedule[dayKey]?.open ?? schedule.open, (newVal) {
+                          final current = _schedule[dayKey] ?? schedule;
+                          _schedule[dayKey] = current.copyWith(open: newVal);
                         });
                       }),
                       const Text('à', style: TextStyle(color: Colors.white54, fontSize: 13)),
                       _buildTimeChip(schedule.close, () {
-                        _pickTime(context, schedule.close, (newVal) {
-                          _schedule[dayKey] = schedule.copyWith(close: newVal);
+                        _pickTime(context, _schedule[dayKey]?.close ?? schedule.close, (newVal) {
+                          final current = _schedule[dayKey] ?? schedule;
+                          _schedule[dayKey] = current.copyWith(close: newVal);
                         });
                       }),
                       const SizedBox(width: 12),
                       InkWell(
                         onTap: () {
                           setState(() {
-                            _schedule[dayKey] = schedule.copyWith(hasSecondSlot: !schedule.hasSecondSlot);
+                            final current = _schedule[dayKey] ?? schedule;
+                            _schedule[dayKey] = current.copyWith(hasSecondSlot: !current.hasSecondSlot);
                           });
                         },
                         child: Row(
@@ -384,7 +427,8 @@ class _RestoInfoTabState extends State<RestoInfoTab> {
                               activeColor: AppTheme.emeraldGreen,
                               onChanged: (val) {
                                 setState(() {
-                                  _schedule[dayKey] = schedule.copyWith(hasSecondSlot: val ?? false);
+                                  final current = _schedule[dayKey] ?? schedule;
+                                  _schedule[dayKey] = current.copyWith(hasSecondSlot: val ?? false);
                                 });
                               },
                             ),
@@ -394,14 +438,16 @@ class _RestoInfoTabState extends State<RestoInfoTab> {
                       ),
                       if (schedule.hasSecondSlot) ...[
                         _buildTimeChip(schedule.open2, () {
-                          _pickTime(context, schedule.open2, (newVal) {
-                            _schedule[dayKey] = schedule.copyWith(open2: newVal);
+                          _pickTime(context, _schedule[dayKey]?.open2 ?? schedule.open2, (newVal) {
+                            final current = _schedule[dayKey] ?? schedule;
+                            _schedule[dayKey] = current.copyWith(open2: newVal);
                           });
                         }),
                         const Text('à', style: TextStyle(color: Colors.white54, fontSize: 13)),
                         _buildTimeChip(schedule.close2, () {
-                          _pickTime(context, schedule.close2, (newVal) {
-                            _schedule[dayKey] = schedule.copyWith(close2: newVal);
+                          _pickTime(context, _schedule[dayKey]?.close2 ?? schedule.close2, (newVal) {
+                            final current = _schedule[dayKey] ?? schedule;
+                            _schedule[dayKey] = current.copyWith(close2: newVal);
                           });
                         }),
                       ],
