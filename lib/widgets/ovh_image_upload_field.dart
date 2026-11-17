@@ -34,7 +34,7 @@ class _OvhImageUploadFieldState extends State<OvhImageUploadField> {
         widget.onUploaded?.call();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("✅ Nouvelle photo enregistrée sur le serveur OVH !"),
+            content: Text("✅ Photo optimisée et enregistrée sur le serveur OVH !"),
             backgroundColor: Color(0xFF10B981),
             behavior: SnackBarBehavior.floating,
           ),
@@ -44,7 +44,7 @@ class _OvhImageUploadFieldState extends State<OvhImageUploadField> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("⛔ Erreur upload OVH : $e"),
+            content: Text("⛔ Erreur upload OVH : ${e.toString().replaceAll("Exception: ", "")}"),
             backgroundColor: const Color(0xFFEF4444),
             behavior: SnackBarBehavior.floating,
           ),
@@ -103,7 +103,7 @@ class _OvhImageUploadFieldState extends State<OvhImageUploadField> {
                     child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981)),
                   ),
                   SizedBox(width: 8),
-                  Text("Envoi vers OVH...", style: TextStyle(color: Color(0xFF10B981), fontSize: 11)),
+                  Text("Optimisation et envoi...", style: TextStyle(color: Color(0xFF10B981), fontSize: 11)),
                 ],
               ),
           ],
