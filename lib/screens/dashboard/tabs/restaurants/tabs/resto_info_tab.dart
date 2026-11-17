@@ -24,6 +24,7 @@ class _RestoInfoTabState extends State<RestoInfoTab> {
   late TextEditingController _igCtrl;
   late TextEditingController _ttCtrl;
   late TextEditingController _stripeAccCtrl;
+  late TextEditingController _startingPriceCtrl;
   late String _status;
   bool _isLoading = false;
 
@@ -42,9 +43,32 @@ class _RestoInfoTabState extends State<RestoInfoTab> {
     _igCtrl = TextEditingController(text: widget.restaurant.instagram);
     _ttCtrl = TextEditingController(text: widget.restaurant.tiktok);
     _stripeAccCtrl = TextEditingController(text: widget.restaurant.stripeAccountId);
+    _startingPriceCtrl = TextEditingController(
+      text: widget.restaurant.startingPrice != null
+          ? (widget.restaurant.startingPrice! % 1 == 0
+              ? widget.restaurant.startingPrice!.toInt().toString()
+              : widget.restaurant.startingPrice!.toStringAsFixed(2))
+          : '',
+    );
     _status = widget.restaurant.status;
 
     _initOpeningHours();
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _imgCtrl.dispose();
+    _typeCtrl.dispose();
+    _zoneCtrl.dispose();
+    _latCtrl.dispose();
+    _lngCtrl.dispose();
+    _fbCtrl.dispose();
+    _igCtrl.dispose();
+    _ttCtrl.dispose();
+    _stripeAccCtrl.dispose();
+    _startingPriceCtrl.dispose();
+    super.dispose();
   }
 
   void _initOpeningHours() {
@@ -136,6 +160,10 @@ class _RestoInfoTabState extends State<RestoInfoTab> {
         openingHoursMap[day] = schedule.toJson();
       });
 
+      final double? startingPrice = _startingPriceCtrl.text.trim().isNotEmpty
+          ? double.tryParse(_startingPriceCtrl.text.trim().replaceAll(',', '.'))
+          : null;
+
       final updatedResto = RestaurantModel(
         id: widget.restaurant.id,
         name: _nameCtrl.text.trim(),
@@ -151,6 +179,7 @@ class _RestoInfoTabState extends State<RestoInfoTab> {
         tiktok: _ttCtrl.text.trim(),
         stripeAccountId: _stripeAccCtrl.text.trim().isNotEmpty ? _stripeAccCtrl.text.trim() : null,
         openingHours: openingHoursMap,
+        startingPrice: startingPrice,
       );
 
       await FirebaseFirestore.instance.collection('restaurants').doc(widget.restaurant.id).update(updatedResto.toJson());
@@ -169,14 +198,25 @@ class _RestoInfoTabState extends State<RestoInfoTab> {
     }
   }
 
-  Widget _buildField(String label, TextEditingController ctrl) {
+  Widget _buildField(
+    String label,
+    TextEditingController ctrl, {
+    String? helperText,
+    String? suffixText,
+    TextInputType? keyboardType,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextField(
         controller: ctrl,
+        keyboardType: keyboardType,
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           labelText: label,
+          helperText: helperText,
+          helperStyle: const TextStyle(color: Colors.white54, fontSize: 11),
+          suffixText: suffixText,
+          suffixStyle: const TextStyle(color: AppTheme.emeraldGreen, fontWeight: FontWeight.bold),
           labelStyle: const TextStyle(color: Colors.white54),
           enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
           focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: AppTheme.emeraldGreen)),
@@ -407,6 +447,13 @@ class _RestoInfoTabState extends State<RestoInfoTab> {
                 if (isMobile) ...[
                   _buildField('Type (ex: Fusion)', _typeCtrl),
                   _buildField('Zone', _zoneCtrl),
+                  _buildField(
+                    'Montant minimum des plats (€)',
+                    _startingPriceCtrl,
+                    helperText: 'Affiché dans l\'application ("À partir de X €")',
+                    suffixText: '€',
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
                   _buildField('Latitude', _latCtrl),
                   _buildField('Longitude', _lngCtrl),
                 ] else ...[
@@ -415,6 +462,16 @@ class _RestoInfoTabState extends State<RestoInfoTab> {
                       Expanded(child: _buildField('Type (ex: Fusion)', _typeCtrl)),
                       const SizedBox(width: 16),
                       Expanded(child: _buildField('Zone', _zoneCtrl)),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildField(
+                          'Montant minimum des plats (€)',
+                          _startingPriceCtrl,
+                          helperText: 'Affiché dans l\'application ("À partir de X €")',
+                          suffixText: '€',
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        ),
+                      ),
                     ],
                   ),
                   Row(
